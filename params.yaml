@@ -1,0 +1,21 @@
+# Parameters for the ML pipeline
+
+data_ingestion:
+  test_size: 0.2
+
+data_preprocessing:
+  min_words: 3
+
+feature_engineering:
+  max_features: 100
+
+model_training:
+  random_state: 42
+  cv: 5
+  
+model_evaluation:
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1
