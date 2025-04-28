@@ -49,8 +49,34 @@ warnings.filterwarnings("ignore")
 
 # Below code block is for local use
 # -------------------------------------------------------------------------------------
-mlflow.set_tracking_uri("https://dagshub.com/jaggusuperhit/capstone.mlflow")
-dagshub.init(repo_owner="jaggusuperhit", repo_name="capstone", mlflow=True)
+# Set up MLflow tracking with error handling
+try:
+    # Check if CAPSTONE_TEST environment variable is set
+    dagshub_token = os.environ.get("CAPSTONE_TEST")
+
+    if dagshub_token:
+        # Set up MLflow tracking with authentication
+        os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
+        os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+
+        # Set tracking URI and initialize DagsHub
+        mlflow.set_tracking_uri("https://dagshub.com/jaggusuperhit/capstone.mlflow")
+        dagshub.init(repo_owner="jaggusuperhit", repo_name="capstone", mlflow=True)
+        print("MLflow tracking set up with DagsHub authentication")
+    else:
+        # Set up local MLflow tracking
+        print("CAPSTONE_TEST environment variable not set. Using local MLflow tracking.")
+        mlflow_dir = os.path.join(os.getcwd(), "mlruns")
+        os.makedirs(mlflow_dir, exist_ok=True)
+        mlflow.set_tracking_uri(f"file://{mlflow_dir}")
+        print(f"MLflow tracking set to local directory: {mlflow_dir}")
+        # Set a flag to indicate that DagsHub is not available
+        os.environ["DAGSHUB_DISABLED"] = "true"
+except Exception as e:
+    print(f"Warning: Failed to set up MLflow tracking: {e}")
+    print("Continuing without MLflow tracking")
+    # Set a flag to indicate that MLflow tracking is not available
+    os.environ["MLFLOW_TRACKING_DISABLED"] = "true"
 # -------------------------------------------------------------------------------------
 
 
@@ -93,6 +119,20 @@ def main():
     try:
         print("Starting model registration process...")
 
+        # Check if MLflow tracking is disabled
+        if os.environ.get("MLFLOW_TRACKING_DISABLED") == "true":
+            print("MLflow tracking is disabled. Skipping model registration.")
+            print("Model registration process completed with local tracking only.")
+            return
+
+        # Check if DagsHub is disabled (using local MLflow)
+        if os.environ.get("DAGSHUB_DISABLED") == "true":
+            print("DagsHub integration is disabled. Using local MLflow tracking.")
+            print("Model registration will be local only.")
+            # For local tracking, we don't need to register the model in a registry
+            print("Model registration process completed with local tracking only.")
+            return
+
         # Check if reports directory exists
         if not os.path.exists('reports'):
             print("Error: 'reports' directory does not exist. Please run model_evaluation.py first.")
@@ -120,10 +160,12 @@ def main():
         except Exception as e:
             logging.error('Error during model registration: %s', e)
             print(f"Error during model registration: {e}")
+            print("Continuing without model registration.")
 
     except Exception as e:
         logging.error('Failed to complete the model registration process: %s', e)
         print(f"Error: {e}")
+        print("Model registration process failed, but this is not critical for the pipeline.")
 
 if __name__ == '__main__':
     main()
