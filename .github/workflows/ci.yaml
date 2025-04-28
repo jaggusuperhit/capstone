@@ -19,13 +19,18 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('ci-requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          # Install dagshub first to avoid setup.py issues
+          pip install dagshub>=0.2.0
+          # Install CI requirements
+          pip install -r ci-requirements.txt
+          # Install the package in development mode
+          pip install -e .
 
       # Set up GCP authentication
       - name: Set up GCP credentials
