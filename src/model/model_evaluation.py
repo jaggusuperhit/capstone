@@ -47,8 +47,32 @@ except ImportError:
 
 # Below code block is for local use
 # -------------------------------------------------------------------------------------
-mlflow.set_tracking_uri("https://dagshub.com/jaggusuperhit/capstone.mlflow")
-dagshub.init(repo_owner="jaggusuperhit", repo_name="capstone", mlflow=True)
+# Set up MLflow tracking with error handling
+try:
+    # Check if CAPSTONE_TEST environment variable is set
+    dagshub_token = os.getenv("CAPSTONE_TEST")
+
+    if dagshub_token:
+        # Set up MLflow tracking with authentication
+        os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
+        os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+
+        # Set tracking URI and initialize DagsHub
+        mlflow.set_tracking_uri("https://dagshub.com/jaggusuperhit/capstone.mlflow")
+        dagshub.init(repo_owner="jaggusuperhit", repo_name="capstone", mlflow=True)
+        print("MLflow tracking set up with DagsHub authentication")
+    else:
+        # Set up local MLflow tracking
+        print("CAPSTONE_TEST environment variable not set. Using local MLflow tracking.")
+        mlflow_dir = os.path.join(os.getcwd(), "mlruns")
+        os.makedirs(mlflow_dir, exist_ok=True)
+        mlflow.set_tracking_uri(f"file://{mlflow_dir}")
+        print(f"MLflow tracking set to local directory: {mlflow_dir}")
+except Exception as e:
+    print(f"Warning: Failed to set up MLflow tracking: {e}")
+    print("Continuing without MLflow tracking")
+    # Set a flag to indicate that MLflow tracking is not available
+    os.environ["MLFLOW_TRACKING_DISABLED"] = "true"
 # -------------------------------------------------------------------------------------
 
 
@@ -130,35 +154,47 @@ def main():
         # Create reports directory if it doesn't exist
         os.makedirs('reports', exist_ok=True)
 
-        print("Setting up MLflow experiment...")
-        mlflow.set_experiment("my-dvc-pipeline")
+        # Load model
+        print("Loading model...")
+        clf = load_model('./models/model.pkl')
 
-        with mlflow.start_run() as run:  # Start an MLflow run
-            print(f"MLflow run started with run_id: {run.info.run_id}")
+        # Load test data
+        print("Loading test data...")
+        test_data = load_data('./data/processed/test_bow.csv')
 
-            try:
-                # Load model
-                print("Loading model...")
-                clf = load_model('./models/model.pkl')
+        X_test = test_data.iloc[:, :-1].values
+        y_test = test_data.iloc[:, -1].values
+        print(f"Test data shape: X_test {X_test.shape}, y_test {y_test.shape}")
 
-                # Load test data
-                print("Loading test data...")
-                test_data = load_data('./data/processed/test_bow.csv')
+        # Evaluate model
+        print("\nEvaluating model...")
+        metrics = evaluate_model(clf, X_test, y_test)
+        print("Model evaluation metrics:")
+        for metric_name, metric_value in metrics.items():
+            print(f"  {metric_name}: {metric_value:.4f}")
 
-                X_test = test_data.iloc[:, :-1].values
-                y_test = test_data.iloc[:, -1].values
-                print(f"Test data shape: X_test {X_test.shape}, y_test {y_test.shape}")
+        # Save metrics
+        print("\nSaving metrics...")
+        save_metrics(metrics, 'reports/metrics.json')
 
-                # Evaluate model
-                print("\nEvaluating model...")
-                metrics = evaluate_model(clf, X_test, y_test)
-                print("Model evaluation metrics:")
-                for metric_name, metric_value in metrics.items():
-                    print(f"  {metric_name}: {metric_value:.4f}")
+        # Check if MLflow tracking is disabled
+        if os.environ.get("MLFLOW_TRACKING_DISABLED") == "true":
+            print("MLflow tracking is disabled. Skipping MLflow logging.")
 
-                # Save metrics
-                print("\nSaving metrics...")
-                save_metrics(metrics, 'reports/metrics.json')
+            # Save model info without run ID
+            print("Saving model info without MLflow run ID...")
+            save_model_info("local", "model", 'reports/experiment_info.json')
+
+            print("Model evaluation process completed successfully!")
+            return
+
+        # If MLflow tracking is enabled, proceed with MLflow logging
+        try:
+            print("Setting up MLflow experiment...")
+            mlflow.set_experiment("my-dvc-pipeline")
+
+            with mlflow.start_run() as run:  # Start an MLflow run
+                print(f"MLflow run started with run_id: {run.info.run_id}")
 
                 # Log metrics to MLflow
                 print("Logging metrics to MLflow...")
@@ -184,15 +220,21 @@ def main():
                 print("Logging metrics file to MLflow...")
                 mlflow.log_artifact('reports/metrics.json')
 
-                print("Model evaluation process completed successfully!")
+                print("Model evaluation process completed successfully with MLflow tracking!")
+        except Exception as e:
+            logging.error('Failed to complete the MLflow logging: %s', e)
+            print(f"Error during MLflow run: {e}")
+            print("Continuing without MLflow tracking...")
 
-            except Exception as e:
-                logging.error('Failed to complete the model evaluation process: %s', e)
-                print(f"Error during MLflow run: {e}")
+            # Save model info without run ID
+            print("Saving model info without MLflow run ID...")
+            save_model_info("local", "model", 'reports/experiment_info.json')
+
+            print("Model evaluation process completed successfully without MLflow tracking!")
 
     except Exception as e:
-        logging.error('Failed to set up MLflow experiment: %s', e)
-        print(f"Error setting up MLflow: {e}")
+        logging.error('Failed to complete the model evaluation process: %s', e)
+        print(f"Error during model evaluation: {e}")
 
 if __name__ == '__main__':
     main()

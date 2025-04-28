@@ -104,11 +104,27 @@ jobs:
         run: |
           python -m unittest tests/test_model.py
 
+      # Check if CAPSTONE_TEST is available
+      - name: Check CAPSTONE_TEST availability
+        id: check-capstone-test
+        run: |
+          if [ -n "${{ secrets.CAPSTONE_TEST }}" ]; then
+            echo "capstone_test_available=true" >> $GITHUB_OUTPUT
+            echo "CAPSTONE_TEST is available"
+          else
+            echo "capstone_test_available=false" >> $GITHUB_OUTPUT
+            echo "CAPSTONE_TEST is not available. MLflow tracking will be disabled."
+          fi
+
       - name: Promote model to production
-        if: success()
+        if: success() && steps.check-capstone-test.outputs.capstone_test_available == 'true'
         env:
           CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
         run: python scripts/promote_model.py
+
+      - name: Skip model promotion
+        if: success() && steps.check-capstone-test.outputs.capstone_test_available != 'true'
+        run: echo "Skipping model promotion because CAPSTONE_TEST is not available"
 
       - name: Run Flask app tests
         if: success()
