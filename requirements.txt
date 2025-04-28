@@ -18,7 +18,9 @@ nltk>=3.8.1
 
 # Cloud storage
 google-cloud-storage>=2.0.0
-awscli  # Keep for backward compatibility
+google-auth>=2.0.0
+google-api-python-client>=2.0.0
+# awscli removed - using GCP instead
 
 # MLOps
 dvc>=2.10.0

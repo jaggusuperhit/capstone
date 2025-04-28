@@ -1,0 +1,119 @@
+name: CI Pipeline
+
+on: push
+
+jobs:
+  project-testing:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      # Set up GCP authentication
+      - name: Set up GCP credentials
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # Set up gcloud CLI
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      # Configure Docker to use gcloud as a credential helper
+      - name: Configure Docker for GCP
+        run: |
+          gcloud auth configure-docker gcr.io,us-docker.pkg.dev --quiet
+
+      # Set up GCP credentials for DVC
+      - name: Set up GCP credentials for DVC
+        run: |
+          echo '${{ secrets.GCP_SA_KEY }}' > gcp-key.json
+          export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/gcp-key.json" >> $GITHUB_ENV
+
+      - name: Run pipeline
+        env:
+          CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
+          GCP_BUCKET_NAME: ${{ secrets.GCP_BUCKET_NAME }}
+        run: |
+          dvc repro
+
+      - name: Run model tests
+        env:
+          CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
+        run: |
+          python -m unittest tests/test_model.py
+
+      - name: Promote model to production
+        if: success()
+        env:
+          CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
+        run: python scripts/promote_model.py
+
+      - name: Run Flask app tests
+        if: success()
+        env:
+          CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
+        run: python -m unittest tests/test_flask_app.py
+
+      # Build and push Docker image to Google Container Registry
+      - name: Build Docker image
+        run: |
+          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCR_REPOSITORY }}:latest .
+
+      - name: Push Docker image to GCR
+        run: |
+          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCR_REPOSITORY }}:latest
+
+      # Set up kubectl for GKE
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      # Configure kubectl for GKE
+      - name: Configure kubectl for GKE
+        run: |
+          gcloud container clusters get-credentials ${{ secrets.GKE_CLUSTER_NAME }} --zone ${{ secrets.GKE_ZONE }} --project ${{ secrets.GCP_PROJECT_ID }}
+
+      # Create Kubernetes Secret
+      - name: Create Kubernetes Secret
+        run: |
+          kubectl create secret generic capstone-secret \
+            --from-literal=CAPSTONE_TEST=${{ secrets.CAPSTONE_TEST }} \
+            --from-literal=GOOGLE_APPLICATION_CREDENTIALS=/app/gcp-key.json \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      # Create GCP service account key secret
+      - name: Create GCP SA Key Secret
+        run: |
+          kubectl create secret generic gcp-sa-key \
+            --from-file=key.json=gcp-key.json \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      # Deploy to GKE
+      - name: Deploy to GKE
+        run: |
+          # Update image in deployment.yaml if needed
+          sed -i 's|IMAGE_TO_REPLACE|gcr.io/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.GCR_REPOSITORY }}:latest|g' deployment.yaml
+          kubectl apply -f deployment.yaml

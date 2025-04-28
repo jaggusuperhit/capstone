@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiment Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        form {
+            margin-top: 20px;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            height: 100px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .positive {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .negative {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        .neutral {
+            background-color: #d9edf7;
+            color: #31708f;
+        }
+        .error {
+            background-color: #f2dede;
+            color: #a94442;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        .status {
+            text-align: center;
+            font-size: 0.8em;
+            margin-top: 20px;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .status.ready {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .status.fallback {
+            background-color: #fcf8e3;
+            color: #8a6d3b;
+        }
+        .status.unavailable {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sentiment Analysis</h1>
+
+        {% if model_status %}
+        <div class="status {% if 'Fallback' in model_status %}fallback{% elif 'Not Available' in model_status %}unavailable{% else %}ready{% endif %}">
+            Model Status: {{ model_status }}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="error">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/predict">
+            <textarea name="text" placeholder="Enter text for sentiment analysis..."></textarea>
+            <button type="submit">Analyze Sentiment</button>
+        </form>
+
+        {% if result is not none %}
+        <div class="result {% if result == 1 %}positive{% elif result == 0 %}negative{% else %}neutral{% endif %}">
+            <h3>Sentiment Analysis Result:</h3>
+            <p>
+                {% if result == 1 %}
+                    Positive 😊
+                {% elif result == 0 %}
+                    Negative 😞
+                {% else %}
+                    Neutral 😐
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

@@ -1,12 +1,12 @@
-.PHONY: clean data lint requirements sync_data_to_s3 sync_data_from_s3
+.PHONY: clean data lint requirements sync_data_to_gcs sync_data_from_gcs
 
 #################################################################################
 # GLOBALS                                                                       #
 #################################################################################
 
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
-PROFILE = default
+BUCKET = sentiment-analysis-data-20250428
+PROJECT_ID = rag-youtube-457803
 PROJECT_NAME = mlops_capstone
 PYTHON_INTERPRETER = python3
 
@@ -38,21 +38,13 @@ clean:
 lint:
 	flake8 src
 
-## Upload Data to S3
-sync_data_to_s3:
-ifeq (default,$(PROFILE))
-	aws s3 sync data/ s3://$(BUCKET)/data/
-else
-	aws s3 sync data/ s3://$(BUCKET)/data/ --profile $(PROFILE)
-endif
+## Upload Data to Google Cloud Storage
+sync_data_to_gcs:
+	gcloud storage cp --recursive data/ gs://$(BUCKET)/data/ --project $(PROJECT_ID)
 
-## Download Data from S3
-sync_data_from_s3:
-ifeq (default,$(PROFILE))
-	aws s3 sync s3://$(BUCKET)/data/ data/
-else
-	aws s3 sync s3://$(BUCKET)/data/ data/ --profile $(PROFILE)
-endif
+## Download Data from Google Cloud Storage
+sync_data_from_gcs:
+	gcloud storage cp --recursive gs://$(BUCKET)/data/ data/ --project $(PROJECT_ID)
 
 ## Set up python interpreter environment
 create_environment:

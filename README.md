@@ -46,36 +46,67 @@ pip install -r requirements.txt
 
 ### Google Cloud Platform Setup
 
-1. Create a GCP project and enable the Cloud Storage API.
+1. Create a GCP project and enable the required APIs:
 
-2. Create a Cloud Storage bucket:
+   - Cloud Storage API
+   - Container Registry API
+   - Kubernetes Engine API
 
-```bash
-gsutil mb -l us-central1 gs://your-bucket-name
-```
+2. Create a service account with the following permissions:
 
-3. Create a service account and download the key file:
+   - Storage Admin
+   - Container Registry Service Agent
+   - Kubernetes Engine Admin
+   - Artifact Registry Admin
+
+3. Create a key for the service account and download it as JSON:
 
    - Go to the GCP Console > IAM & Admin > Service Accounts
-   - Create a new service account with Storage Admin permissions
-   - Create a key for the service account and download it as JSON
+   - Find your service account and click on it
+   - Go to the "Keys" tab and click "Add Key" > "Create new key"
+   - Select JSON format and click "Create"
+   - Save the key file securely
 
-4. Set the environment variable for authentication:
+4. Use the provided setup script to configure your environment:
 
 ```bash
+# On Windows PowerShell
+.\setup_gcp_env.ps1 -CredentialsPath "C:\path\to\your-service-account-key.json"
+
+# On Linux/Mac
+chmod +x setup_gcp_env.sh
+./setup_gcp_env.sh /path/to/your-service-account-key.json
+```
+
+This script will:
+
+- Set the GOOGLE_APPLICATION_CREDENTIALS environment variable
+- Create the GCP bucket if it doesn't exist
+- Update the GCP configuration in `src/connections/gcp_config.json`
+
+5. Alternatively, you can set up manually:
+
+```bash
+# Set environment variable
 # On Linux/Mac
 export GOOGLE_APPLICATION_CREDENTIALS="/path/to/your-service-account-key.json"
 
 # On Windows PowerShell
 $env:GOOGLE_APPLICATION_CREDENTIALS="C:\path\to\your-service-account-key.json"
+
+# Create bucket (if it doesn't exist)
+gcloud storage buckets create gs://sentiment-analysis-data-20250428 --location=us-central1
+
+# Update config file
+# Edit src/connections/gcp_config.json with your project details
 ```
 
-5. Update the GCP configuration in `src/connections/gcp_config.json`:
+The GCP configuration in `src/connections/gcp_config.json` should look like:
 
 ```json
 {
   "gcp": {
-    "bucket_name": "your-bucket-name",
+    "bucket_name": "sentiment-analysis-data-20250428",
     "project_id": "your-project-id",
     "region": "us-central1"
   }
@@ -104,22 +135,34 @@ dvc repro model_registration
 ## Project Structure
 
 ```
-├── data/               # Data directory
-│   ├── raw/            # Raw data
-│   ├── interim/        # Preprocessed data
-│   └── processed/      # Feature-engineered data
-├── models/             # Trained models
-├── reports/            # Model evaluation reports
-├── src/                # Source code
-│   ├── connections/    # Cloud connections
-│   ├── data/           # Data processing scripts
-│   ├── features/       # Feature engineering scripts
-│   ├── logger/         # Logging configuration
-│   ├── model/          # Model training and evaluation scripts
-│   └── visualization/  # Visualization utilities
-├── dvc.yaml            # DVC pipeline configuration
-├── params.yaml         # Pipeline parameters
-└── README.md           # Project documentation
+├── data/                       # Data directory
+│   ├── raw/                    # Raw data
+│   ├── interim/                # Preprocessed data
+│   └── processed/              # Feature-engineered data
+├── models/                     # Trained models
+├── reports/                    # Model evaluation reports
+├── src/                        # Source code
+│   ├── connections/            # Cloud connections
+│   │   ├── gcp_config.json     # GCP configuration
+│   │   └── gcp_connection.py   # GCP connection utilities
+│   ├── data/                   # Data processing scripts
+│   ├── features/               # Feature engineering scripts
+│   ├── logger/                 # Logging configuration
+│   ├── model/                  # Model training and evaluation scripts
+│   └── visualization/          # Visualization utilities
+├── flask_app/                  # Flask web application
+│   ├── app.py                  # Main Flask application
+│   └── templates/              # HTML templates
+├── .github/workflows/          # GitHub Actions workflows
+│   └── ci.yaml                 # CI/CD pipeline configuration
+├── dvc.yaml                    # DVC pipeline configuration
+├── params.yaml                 # Pipeline parameters
+├── Dockerfile                  # Docker configuration
+├── deployment.yaml             # Kubernetes deployment configuration
+├── setup_gcp.py                # GCP setup script
+├── setup_gcp_env.ps1           # PowerShell setup script
+├── setup_gcp_env.sh            # Bash setup script
+└── README.md                   # Project documentation
 ```
 
 ## MLflow Tracking

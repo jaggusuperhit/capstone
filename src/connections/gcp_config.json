@@ -1,7 +1,7 @@
 {
   "gcp": {
-    "bucket_name": "your-bucket-name",
-    "project_id": "your-project-id",
+    "bucket_name": "sentiment-analysis-data-20250428",
+    "project_id": "rag-youtube-457803",
     "region": "us-central1"
   }
 }

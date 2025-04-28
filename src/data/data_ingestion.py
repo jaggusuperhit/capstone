@@ -118,8 +118,13 @@ def main():
             # Check if GCP credentials are set
             if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
                 print("Loading data from GCP Cloud Storage...")
-                # Replace with your actual GCP bucket name
-                gcp = gcp_connection.gcp_operations("your-bucket-name")
+                # Load GCP config from config file
+                import json
+                with open('src/connections/gcp_config.json', 'r') as f:
+                    gcp_config = json.load(f)
+                bucket_name = gcp_config['gcp']['bucket_name']
+
+                gcp = gcp_connection.gcp_operations(bucket_name)
                 df = gcp.fetch_file_from_gcs("data/data.csv")
                 if df is not None:
                     print(f"Data loaded successfully from GCP. Shape: {df.shape}")
@@ -153,7 +158,13 @@ def main():
         try:
             if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
                 print("Uploading processed data to GCP Cloud Storage...")
-                gcp = gcp_connection.gcp_operations("your-bucket-name")
+                # Load GCP config from config file
+                import json
+                with open('src/connections/gcp_config.json', 'r') as f:
+                    gcp_config = json.load(f)
+                bucket_name = gcp_config['gcp']['bucket_name']
+
+                gcp = gcp_connection.gcp_operations(bucket_name)
 
                 # Create temporary CSV files
                 train_temp_path = "train_temp.csv"
