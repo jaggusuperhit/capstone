@@ -1,0 +1,7 @@
+{
+  "gcp": {
+    "bucket_name": "your-bucket-name",
+    "project_id": "your-project-id",
+    "region": "us-central1"
+  }
+}

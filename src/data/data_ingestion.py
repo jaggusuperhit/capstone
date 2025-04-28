@@ -15,6 +15,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 # Now import from src
 try:
     from src.logger import logging
+    from src.connections import gcp_connection
 except ImportError:
     # If the above import fails, set up basic logging
     logging.basicConfig(
@@ -24,7 +25,6 @@ except ImportError:
             logging.StreamHandler(sys.stdout)
         ]
     )
-# from src.connections import s3_connection
 
 
 def load_params(params_path: str) -> dict:
@@ -103,16 +103,38 @@ def save_data(train_data: pd.DataFrame, test_data: pd.DataFrame, data_path: str)
 def main():
     try:
         print("Starting data ingestion process...")
-        # params = load_params(params_path='params.yaml')
-        # test_size = params['data_ingestion']['test_size']
-        test_size = 0.2
 
-        print("Loading data from GitHub...")
-        df = load_data(data_url="https://github.com/jaggusuperhit/capstone/blob/main/notebooks/data.csv")
-        # s3 = s3_connection.s3_operations("bucket-name", "accesskey", "secretkey")
-        # df = s3.fetch_file_from_s3("data.csv")
+        # Load parameters
+        try:
+            params = load_params(params_path='params.yaml')
+            test_size = params['data_ingestion']['test_size']
+            print(f"Using test_size={test_size} from params.yaml")
+        except Exception as e:
+            print(f"Failed to load parameters: {e}. Using default test_size=0.2")
+            test_size = 0.2
 
-        print(f"Data loaded successfully. Shape: {df.shape}")
+        # Try to load data from GCP if credentials are available
+        try:
+            # Check if GCP credentials are set
+            if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+                print("Loading data from GCP Cloud Storage...")
+                # Replace with your actual GCP bucket name
+                gcp = gcp_connection.gcp_operations("your-bucket-name")
+                df = gcp.fetch_file_from_gcs("data/data.csv")
+                if df is not None:
+                    print(f"Data loaded successfully from GCP. Shape: {df.shape}")
+                else:
+                    raise Exception("Failed to load data from GCP")
+            else:
+                # Fallback to GitHub if GCP credentials are not available
+                print("GCP credentials not found. Loading data from GitHub...")
+                df = load_data(data_url="https://github.com/jaggusuperhit/capstone/blob/main/notebooks/data.csv")
+                print(f"Data loaded successfully from GitHub. Shape: {df.shape}")
+        except Exception as e:
+            print(f"Error loading data from GCP: {e}. Falling back to GitHub...")
+            df = load_data(data_url="https://github.com/jaggusuperhit/capstone/blob/main/notebooks/data.csv")
+            print(f"Data loaded successfully from GitHub. Shape: {df.shape}")
+
         print("Sample data:")
         print(df.head())
 
@@ -126,6 +148,31 @@ def main():
 
         print("Saving data...")
         save_data(train_data, test_data, data_path='./data')
+
+        # Upload processed data to GCP if credentials are available
+        try:
+            if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+                print("Uploading processed data to GCP Cloud Storage...")
+                gcp = gcp_connection.gcp_operations("your-bucket-name")
+
+                # Create temporary CSV files
+                train_temp_path = "train_temp.csv"
+                test_temp_path = "test_temp.csv"
+                train_data.to_csv(train_temp_path, index=False)
+                test_data.to_csv(test_temp_path, index=False)
+
+                # Upload to GCP
+                gcp.upload_file_to_gcs(train_temp_path, "processed/train.csv")
+                gcp.upload_file_to_gcs(test_temp_path, "processed/test.csv")
+
+                # Clean up temporary files
+                os.remove(train_temp_path)
+                os.remove(test_temp_path)
+
+                print("Data successfully uploaded to GCP Cloud Storage")
+        except Exception as e:
+            print(f"Warning: Could not upload data to GCP: {e}")
+
         print("Data ingestion process completed successfully!")
     except Exception as e:
         logging.error('Failed to complete the data ingestion process: %s', e)
