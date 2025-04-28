@@ -34,9 +34,16 @@ jobs:
           # Install the package in development mode
           pip install -e .
 
-      - name: Create data directories
+      - name: Create data directories and fix Git tracking
         run: |
           mkdir -p data/raw data/interim data/processed
+
+          # Fix the Git-tracked data directory issue
+          echo "Fixing Git-tracked data directory issue..."
+          git rm -r --cached data/raw || true
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git commit -m "stop tracking data/raw" || echo "No changes to commit"
 
       - name: Run model tests
         run: |

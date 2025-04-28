@@ -31,6 +31,55 @@ except ImportError:
 nltk.download('wordnet', quiet=True)
 nltk.download('stopwords', quiet=True)
 
+def preprocess_text(text):
+    """
+    Preprocess a single text string.
+
+    Args:
+        text (str): The text to preprocess.
+
+    Returns:
+        str: The preprocessed text.
+    """
+    # Initialize lemmatizer and stopwords
+    lemmatizer = WordNetLemmatizer()
+    stop_words = set(stopwords.words("english"))
+
+    # Remove URLs
+    text = re.sub(r'https?://\S+|www\.\S+', '', text)
+    # Remove numbers
+    text = ''.join([char for char in text if not char.isdigit()])
+    # Convert to lowercase
+    text = text.lower()
+    # Remove punctuations
+    text = re.sub('[%s]' % re.escape(string.punctuation), ' ', text)
+    text = text.replace('؛', "")
+    text = re.sub(r'\s+', ' ', text).strip()  # Fixed invalid escape sequence
+    # Remove stop words
+    text = " ".join([word for word in text.split() if word not in stop_words])
+    # Lemmatization
+    text = " ".join([lemmatizer.lemmatize(word) for word in text.split()])
+    return text
+
+def preprocess_data(df):
+    """
+    Preprocess the data for sentiment analysis.
+
+    Args:
+        df (pandas.DataFrame): Input DataFrame with text and sentiment columns
+
+    Returns:
+        pandas.DataFrame: Preprocessed DataFrame
+    """
+    # Make a copy of the DataFrame to avoid modifying the original
+    processed_df = df.copy()
+
+    # Convert sentiment labels to binary (1 for positive, 0 for negative)
+    if 'sentiment' in processed_df.columns:
+        processed_df['sentiment'] = processed_df['sentiment'].replace({'positive': 1, 'negative': 0})
+
+    return processed_df
+
 def preprocess_dataframe(df, col='text'):
     """
     Preprocess a DataFrame by applying text preprocessing to a specific column.
@@ -42,27 +91,8 @@ def preprocess_dataframe(df, col='text'):
     Returns:
         pd.DataFrame: The preprocessed DataFrame.
     """
-    # Initialize lemmatizer and stopwords
-    lemmatizer = WordNetLemmatizer()
-    stop_words = set(stopwords.words("english"))
-
-    def preprocess_text(text):
-        """Helper function to preprocess a single text string."""
-        # Remove URLs
-        text = re.sub(r'https?://\S+|www\.\S+', '', text)
-        # Remove numbers
-        text = ''.join([char for char in text if not char.isdigit()])
-        # Convert to lowercase
-        text = text.lower()
-        # Remove punctuations
-        text = re.sub('[%s]' % re.escape(string.punctuation), ' ', text)
-        text = text.replace('؛', "")
-        text = re.sub('\s+', ' ', text).strip()
-        # Remove stop words
-        text = " ".join([word for word in text.split() if word not in stop_words])
-        # Lemmatization
-        text = " ".join([lemmatizer.lemmatize(word) for word in text.split()])
-        return text
+    # Make a copy of the DataFrame
+    df = df.copy()
 
     # Apply preprocessing to the specified column
     df[col] = df[col].apply(preprocess_text)

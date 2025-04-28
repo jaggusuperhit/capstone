@@ -172,3 +172,12 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Data directories (managed by DVC)
+/data/raw/
+/data/interim/
+/data/processed/
+/models/*.pkl
+
+# GCP credentials
+gcp-key.json
