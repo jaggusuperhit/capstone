@@ -1,0 +1,142 @@
+Here is a rewritten version of the text for Google Cloud Platform (GCP):
+-------------------------Setting up project structure---------------------------
+Create a repository on Google Cloud Source Repositories, clone it to your local machine
+Create a virtual environment named 'atlas' - conda create -n atlas python=3.10
+Activate the virtual environment - conda activate atlas
+pip install cookiecutter
+cookiecutter -c v1 https://github.com/drivendata/cookiecutter-data-science
+Rename src/models -> src/model
+git add, commit, and push changes
+-------------------------Setup MLFlow on Vertex AI---------------------------
+Go to the Vertex AI dashboard
+Create a new dataset and link it to your repository
+Copy the experiment tracking URL and code snippet
+pip install google-cloud-aiplatform and mlflow
+Run the experiment notebooks
+git add, commit, and push changes
+Initialize a DVC repository - dvc init
+Create a local folder as "local_bucket" (temporary work)
+On terminal - dvc remote add -d mylocal local_bucket
+Add code to the following files/folders inside the src directory:
+logger
+data_ingestion.py
+data_preprocessing.py
+feature_engineering.py
+model_building.py
+model_evaluation.py
+register_model.py
+Add a file - dvc.yaml (till model evaluation metrics)
+Add a file - params.yaml
+DVC pipeline is ready to run - dvc repro
+Once do - dvc status
+git add, commit, and push changes
+Need to add a Cloud Storage bucket as remote storage - Create a service account and bucket
+pip install dvc[gs] and google-cloud-storage
+Checking/deleting DVC remote (optional) - dvc remote list and dvc remote remove <name>
+Set up authentication for the service account - gcloud auth activate-service-account
+Add Cloud Storage bucket as DVC remote storage - dvc remote add -d myremote gs://<bucket-name>
+Create a new directory - flask_app | Inside that, add the rest of the files and directories
+pip install flask and run the app (dvc push to push data to Cloud Storage)
+pip freeze > requirements.txt
+Add a .github/workflows/ci.yaml file
+Create a service account key for authentication: Go to the IAM dashboard > Service accounts > Create key
+Add this key to GitHub secrets and variables and update the CI file
+Add a directory "tests"&"scripts" and files within. This will contain our test-related scripts for CI.
+Moving to Docker <<<<<
+pip install pipreqs
+cd flask_app & do pipreqs . --force
+Add Dockerfile and start Docker Desktop in the background
+Also before proceeding make sure: [switch the MLFlow server setup to param version, change cmd on Dockerfile]
+Go to the root directory and: docker build -t capstone-app:latest .
+Try running the image: docker run -p 8888:5000 capstone-app:latest
+This run will give an error...obviously
+alternate: docker run -p 8888:5000 -e CAPSTONE_TEST=<key> capstone-app:latest
+docker push gcr.io/<project-id>/capstone-app:latest (optional)
+Set up GCP services for the following secrets and variables:
+GOOGLE_APPLICATION_CREDENTIALS
+GCP_PROJECT_ID
+GCP_REGION
+CONTAINER_REGISTRY (gcr.io/<project-id>/capstone-app)
+(Also add the necessary permissions to the service account)
+Execute the CI/CD pipeline till the stage where we build and push the image to Google Container Registry.
+Setup required before moving to GKE deployment
+Install the Google Cloud SDK: gcloud components update
+Verify the installation: gcloud --version
+Create a GKE cluster:
+gcloud container clusters create flask-app-cluster --num-nodes 1 --machine-type n1-standard-1 --region <region>
+Update kubectl configuration:
+gcloud container clusters get-credentials flask-app-cluster --region <region>
+Check GKE cluster configuration:
+kubectl get nodes
+Delete cluster (optional):
+gcloud container clusters delete flask-app-cluster --region <region>
+Verify the cluster status:
+gcloud container clusters describe flask-app-cluster --region <region> --format="get(status)"
+Check cluster connectivity:
+kubectl get nodes
+Check the namespaces:
+kubectl get namespaces
+Verify the deployment:
+kubectl get pods
+kubectl get svc
+Deploy the app on GKE via CI/CD pipeline
+edit ci.yaml, deployment.yaml, Dockerfile
+Also edit the firewall rules for the cluster
+Once the LoadBalancer service is up, get the external IP:
+kubectl get svc flask-app-service
+Try external-ip:5000 directly on URL or on terminal: curl http://external-ip:5000
+Prometheus Server Setup <<<<<<<<<<
+Launch a Compute Engine instance for Prometheus: n1-standard-1, 20GB of disk space, Firewall rules: Allow inbound access on ports: 9090 for Prometheus Web UI, 22 for SSH access
+SSH into the instance:
+gcloud compute ssh prometheus-instance
+Update packages: sudo apt update && sudo apt upgrade -y
+Download Prometheus:
+wget https://github.com/prometheus/prometheus/releases/download/v2.46.0/prometheus-2.46.0.linux-amd64.tar.gz
+tar -xvzf prometheus-2.46.0.linux-amd64.tar.gz
+mv prometheus-2.46.0.linux-amd64 prometheus
+Move files to standard paths:
+sudo mv prometheus /etc/prometheus
+sudo mv /etc/prometheus/prometheus /usr/local/bin/
+Create Prometheus configuration:
+Open the file for editing: sudo nano /etc/prometheus/prometheus.yml
+Edit the File:
+global:
+scrape_interval: 15s
+scrape_configs:
+job_name: "flask-app"
+static_configs:
+targets: ["<external-ip>:5000"] # Replace with your app's External IP
+Save the File: ctrl+o -> enter -> ctrl+x
+Verify the Changes: cat /etc/prometheus/prometheus.yml
+Run Prometheus with the config file:
+/usr/local/bin/prometheus --config.file=/etc/prometheus/prometheus.yml
+Grafana Server Setup <<<<<<<<<<
+Launch a Compute Engine instance for Grafana: n1-standard-1, 20GB of disk space, Firewall rules: Allow inbound access on ports: 3000 for Grafana Web UI, 22 for SSH access
+SSH into the instance:
+gcloud compute ssh grafana-instance
+Update and upgrade system packages:
+sudo apt update && sudo apt upgrade -y
+Download Grafana:
+wget https://dl.grafana.com/oss/release/grafana_10.1.5_amd64.deb
+Install Grafana:
+sudo apt install ./grafana_10.1.5_amd64.deb -y
+Start the Grafana service:
+sudo systemctl start grafana-server
+Enable Grafana to start on boot:
+sudo systemctl enable grafana-server
+Verify the service is running:
+sudo systemctl status grafana-server
+Open Grafana web UI:
+http://<external-ip>:3000 (username/pass - admin)
+Add Prometheus as a Data Source:
+http://<prometheus-ip>:9090
+click - Save and Test | Get started with building dashboards.
+GCP Resource Cleanup:
+Delete deployment - kubectl delete deployment flask-app
+Delete service - kubectl delete service flask-app-service
+Delete GKE cluster - gcloud container clusters delete flask-app-cluster --region <region>
+Delete Compute Engine instances for Prometheus and Grafana
+Delete Cloud Storage bucket
+Delete Container Registry images
+Note that some commands and steps may vary depending on your specific setup and requirements. This is just a general guide to help you get started with deploying your application on GCP.
+Meta AI Response: Here is a rewritten version of the text for Google Cloud Platform (GCP): -------------------------Setting up project structure--------------------------- Create a repository on Google Cloud Source Repositories, clone it to your local machine Create a virtual environment named 'atlas' - conda create -n atlas python=3.10 Activate the virtual environment - conda activate atlas pip install cookiecutter cookiecutter -c v1 https://github.com/drivendata/cookiecutter-data-science Rename src/models -> src/model git add, commit, and push changes -------------------------Setup MLFlow on Vertex AI--------------------------- Go to the Vertex AI dashboard Create a new dataset and link it to your repository Copy the experiment tracking URL and code snippet pip install google-cloud-aiplatform and mlflow Run the experiment notebooks git add, commit, and push changes Initialize a DVC repository - dvc init Create a local folder as "local_bucket" (temporary work) On terminal - dvc remote add -d mylocal local_bucket Add code to the following files/folders inside the src directory: logger data_ingestion.py data_preprocessing.py feature_engineering.py model_building.py model_evaluation.py register_model.py Add a file - dvc.yaml (till model evaluation metrics) Add a file - params.yaml DVC pipeline is ready to run - dvc repro Once do - dvc status git add, commit, and push changes Need to add a Cloud Storage bucket as remote storage - Create a service account and bucket pip install dvc[gs] and google-cloud-storage Checking/deleting DVC remote (optional) - dvc remote list and dvc remote remove <name> Set up authentication for the service account - gcloud auth activate-service-account Add Cloud Storage bucket as DVC remote storage - dvc remote add -d myremote gs://<bucket-name> Create a new directory - flask_app | Inside that, add the rest of the files and directories pip install flask and run the app (dvc push to push data to Cloud Storage) pip freeze > requirements.txt Add a .github/workflows/ci.yaml file Create a service account key for authentication: Go to the IAM dashboard > Service accounts > Create key Add this key to GitHub secrets and variables and update the CI file Add a directory "tests"&"scripts" and files within. This will contain our test-related scripts for CI. Moving to Docker <<<<< pip install pipreqs cd flask_app & do pipreqs . --force Add Dockerfile and start Docker Desktop in the background Also before proceeding make sure: [switch the MLFlow server setup to param version, change cmd on Dockerfile] Go to the root directory and: docker build -t capstone-app:latest . Try running the image: docker run -p 8888:5000 capstone-app:latest This run will give an error...obviously alternate: docker run -p 8888:5000 -e CAPSTONE_TEST=<key> capstone-app:latest docker push gcr.io/<project-id>/capstone-app:latest (optional) Set up GCP services for the following secrets and variables: GOOGLE_APPLICATION_CREDENTIALS GCP_PROJECT_ID GCP_REGION CONTAINER_REGISTRY (gcr.io/<project-id>/capstone-app) (Also add the necessary permissions to the service account) Execute the CI/CD pipeline till the stage where we build and push the image to Google Container Registry. Setup required before moving to GKE deployment Install the Google Cloud SDK: gcloud components update Verify the installation: gcloud --version Create a GKE cluster: gcloud container clusters create flask-app-cluster --num-nodes 1 --machine-type n1-standard-1 --region <region> Update kubectl configuration: gcloud container clusters get-credentials flask-app-cluster --region <region> Check GKE cluster configuration: kubectl get nodes Delete cluster (optional): gcloud container clusters delete flask-app-cluster --region <region> Verify the cluster status: gcloud container clusters describe flask-app-cluster --region <region> --format="get(status)" Check cluster connectivity: kubectl get nodes Check the namespaces: kubectl get namespaces Verify the deployment: kubectl get pods kubectl get svc Deploy the app on GKE via CI/CD pipeline edit ci.yaml, deployment.yaml, Dockerfile Also edit the firewall rules for the cluster Once the LoadBalancer service is up, get the external IP: kubectl get svc flask-app-service Try external-ip:5000 directly on URL or on terminal: curl http://external-ip:5000 Prometheus Server Setup <<<<<<<<<< Launch a Compute Engine instance for Prometheus: n1-standard-1, 20GB of disk space, Firewall rules: Allow inbound access on ports: 9090 for Prometheus Web UI, 22 for SSH access SSH into the instance: gcloud compute ssh prometheus-instance Update packages: sudo apt update && sudo apt upgrade -y Download Prometheus: wget https://github.com/prometheus/prometheus/releases/download/v2.46.0/prometheus-2.46.0.linux-amd64.tar.gz tar -xvzf prometheus-2.46.0.linux-amd64.tar.gz mv prometheus-2.46.0.linux-amd64 prometheus Move files to standard paths: sudo mv prometheus /etc/prometheus sudo mv /etc/prometheus/prometheus /usr/local/bin/ Create Prometheus configuration: Open the file for editing: sudo nano /etc/prometheus/prometheus.yml Edit the File: global: scrape_interval: 15s scrape_configs: job_name: "flask-app" static_configs: targets: ["<external-ip>:5000"] # Replace with your app's External IP Save the File: ctrl+o -> enter -> ctrl+x Verify the Changes: cat /etc/prometheus/prometheus.yml Run Prometheus with the config file: /usr/local/bin/prometheus --config.file=/etc/prometheus/prometheus.yml Grafana Server Setup <<<<<<<<<< Launch a Compute Engine instance for Grafana: n1-standard-1, 20GB of disk space, Firewall rules: Allow inbound access on ports: 3000 for Grafana Web UI, 22 for SSH access SSH into the instance: gcloud compute ssh grafana-instance Update and upgrade system packages: sudo apt update && sudo apt upgrade -y Download Grafana: wget https://dl.grafana.com/oss/release/grafana_10.1.5_amd64.deb Install Grafana: sudo apt install ./grafana_10.1.5_amd64.deb -y Start the Grafana service: sudo systemctl start grafana-server Enable Grafana to start on boot: sudo systemctl enable grafana-server Verify the service is running: sudo systemctl status grafana-server Open Grafana web UI: http://<external-ip>:3000 (username/pass - admin) Add Prometheus as a Data Source: http://<prometheus-ip>:9090 click - Save and Test | Get started with building dashboards. GCP Resource Cleanup: Delete deployment - kubectl delete deployment flask-app Delete service - kubectl delete service flask-app-service Delete GKE cluster - gcloud container clusters delete flask-app-cluster --region <region> Delete Compute Engine instances for Prometheus and Grafana Delete Cloud Storage bucket Delete Container Registry images Note that some commands and steps may vary depending on your specific setup and requirements. This is just a general guide to help you get started with deploying your application on GCP.
