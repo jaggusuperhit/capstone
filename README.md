@@ -132,6 +132,35 @@ dvc repro model_evaluation
 dvc repro model_registration
 ```
 
+## Running the Flask Application
+
+You can run the Flask application locally:
+
+```bash
+python flask_app/app.py
+```
+
+Or using Docker:
+
+```bash
+# Build the Docker image
+docker build -t sentiment-analysis:latest -f deployment/Dockerfile .
+
+# Run the Docker container
+docker run -d -p 5000:5000 --name sentiment-analysis-app sentiment-analysis:latest
+```
+
+The application will be available at http://localhost:5000
+
+## Deploying to Kubernetes
+
+To deploy the application to Kubernetes:
+
+```bash
+# Apply the Kubernetes deployment
+kubectl apply -f deployment/kubernetes/deployment.yaml
+```
+
 ## Project Structure
 
 ```
@@ -139,8 +168,20 @@ dvc repro model_registration
 │   ├── raw/                    # Raw data
 │   ├── interim/                # Preprocessed data
 │   └── processed/              # Feature-engineered data
+├── deployment/                 # Deployment configurations
+│   ├── Dockerfile              # Docker configuration
+│   └── kubernetes/             # Kubernetes configurations
+│       └── deployment.yaml     # Kubernetes deployment configuration
+├── flask_app/                  # Flask web application
+│   ├── app.py                  # Main Flask application
+│   ├── preprocessing_utility.py # Preprocessing utilities for the app
+│   └── templates/              # HTML templates
 ├── models/                     # Trained models
 ├── reports/                    # Model evaluation reports
+├── scripts/                    # Utility scripts
+│   ├── docker/                 # Docker utility scripts
+│   ├── setup/                  # Setup scripts for GCP and other environments
+│   └── promote_model.py        # Model promotion script
 ├── src/                        # Source code
 │   ├── connections/            # Cloud connections
 │   │   ├── gcp_config.json     # GCP configuration
@@ -150,18 +191,13 @@ dvc repro model_registration
 │   ├── logger/                 # Logging configuration
 │   ├── model/                  # Model training and evaluation scripts
 │   └── visualization/          # Visualization utilities
-├── flask_app/                  # Flask web application
-│   ├── app.py                  # Main Flask application
-│   └── templates/              # HTML templates
+├── tests/                      # Test files
+│   ├── test_flask_app.py       # Tests for Flask application
+│   └── test_model.py           # Tests for ML model
 ├── .github/workflows/          # GitHub Actions workflows
 │   └── ci.yaml                 # CI/CD pipeline configuration
 ├── dvc.yaml                    # DVC pipeline configuration
 ├── params.yaml                 # Pipeline parameters
-├── Dockerfile                  # Docker configuration
-├── deployment.yaml             # Kubernetes deployment configuration
-├── setup_gcp.py                # GCP setup script
-├── setup_gcp_env.ps1           # PowerShell setup script
-├── setup_gcp_env.sh            # Bash setup script
 └── README.md                   # Project documentation
 ```
 

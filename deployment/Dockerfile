@@ -4,10 +4,15 @@ WORKDIR /app
 
 # Copy requirements first for better caching
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install all requirements except the local package
+RUN grep -v "^-e \." requirements.txt > requirements_docker.txt && \
+    pip install --no-cache-dir -r requirements_docker.txt
 
 # Copy the rest of the application
 COPY . .
+
+# Now install the local package
+RUN pip install -e .
 
 # Create directory for GCP credentials
 RUN mkdir -p /gcp

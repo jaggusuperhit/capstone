@@ -68,47 +68,69 @@ def normalize_text(text):
 
     return text
 
-# Below code block is for local use
+# MLflow and DagsHub setup
 # -------------------------------------------------------------------------------------
 try:
-    # Set up MLflow tracking URI directly without using dagshub.init
+    # Convert DAGSHUB_HTTP_TIMEOUT to integer if it exists
+    if os.environ.get("DAGSHUB_HTTP_TIMEOUT"):
+        try:
+            # Remove quotes if present
+            timeout_value = os.environ.get("DAGSHUB_HTTP_TIMEOUT").strip('"')
+            os.environ["DAGSHUB_HTTP_TIMEOUT"] = str(int(timeout_value))
+            print(f"Set DAGSHUB_HTTP_TIMEOUT to {os.environ['DAGSHUB_HTTP_TIMEOUT']}")
+        except ValueError:
+            print(f"Warning: DAGSHUB_HTTP_TIMEOUT value '{os.environ.get('DAGSHUB_HTTP_TIMEOUT')}' is not a valid integer. Using default.")
+            os.environ["DAGSHUB_HTTP_TIMEOUT"] = "30"
+
+    # Set up MLflow tracking URI
     mlflow.set_tracking_uri('https://dagshub.com/jaggusuperhit/capstone.mlflow')
     print("MLflow tracking URI set to: https://dagshub.com/jaggusuperhit/capstone.mlflow")
 
-    # Only try to initialize DagsHub if credentials are available
-    if os.environ.get("MLFLOW_TRACKING_USERNAME") and os.environ.get("MLFLOW_TRACKING_PASSWORD"):
+    # Check for credentials in environment variables
+    username = os.environ.get("MLFLOW_TRACKING_USERNAME")
+    password = os.environ.get("MLFLOW_TRACKING_PASSWORD")
+
+    if username and password:
+        print("Found MLflow tracking credentials in environment variables")
+
+        # Try to initialize DagsHub
         try:
-            dagshub.init(repo_owner='jaggusuperhit', repo_name='capstone', mlflow=True)
+            # Set MLflow tracking username and password
+            os.environ["MLFLOW_TRACKING_USERNAME"] = username
+            os.environ["MLFLOW_TRACKING_PASSWORD"] = password
+
+            # Initialize DagsHub with explicit parameters
+            dagshub.init(
+                repo_owner='jaggusuperhit',
+                repo_name='capstone',
+                mlflow=True
+            )
             print("DagsHub initialized successfully")
         except Exception as e:
             print(f"Warning: Failed to initialize DagsHub: {e}")
             print("Continuing without DagsHub integration")
     else:
-        print("DagsHub credentials not found. Continuing without DagsHub integration.")
+        # Try to use CAPSTONE_TEST as a fallback
+        dagshub_token = os.getenv("CAPSTONE_TEST")
+        if dagshub_token:
+            os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
+            os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+            print("DagsHub credentials set from CAPSTONE_TEST environment variable")
+
+            try:
+                dagshub.init(
+                    repo_owner='jaggusuperhit',
+                    repo_name='capstone',
+                    mlflow=True
+                )
+                print("DagsHub initialized successfully using CAPSTONE_TEST token")
+            except Exception as e:
+                print(f"Warning: Failed to initialize DagsHub with CAPSTONE_TEST token: {e}")
+                print("Continuing without DagsHub integration")
+        else:
+            print("No DagsHub credentials found. Continuing without DagsHub integration.")
 except Exception as e:
     print(f"Warning: Failed to set up MLflow tracking: {e}")
-# -------------------------------------------------------------------------------------
-
-# Below code block is for production use - currently commented out
-# -------------------------------------------------------------------------------------
-# try:
-#     # Set up DagsHub credentials for MLflow tracking
-#     dagshub_token = os.getenv("CAPSTONE_TEST")
-#     if dagshub_token:
-#         os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
-#         os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
-#         print("DagsHub credentials set from environment variable")
-#
-#         # Set up MLflow tracking URI
-#         dagshub_url = "https://dagshub.com"
-#         repo_owner = "jaggusuperhit"
-#         repo_name = "capstone"
-#         mlflow.set_tracking_uri(f'{dagshub_url}/{repo_owner}/{repo_name}.mlflow')
-#         print(f"MLflow tracking URI set to: {dagshub_url}/{repo_owner}/{repo_name}.mlflow")
-#     else:
-#         print("Warning: CAPSTONE_TEST environment variable is not set")
-# except Exception as e:
-#     print(f"Warning: Failed to set up MLflow tracking in production mode: {e}")
 # -------------------------------------------------------------------------------------
 
 
