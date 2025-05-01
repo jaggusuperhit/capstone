@@ -1,0 +1,86 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.egg-info/
+.installed.cfg
+*.egg
+
+# Environment and IDE
+.env
+.venv
+env/
+venv/
+ENV/
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# DVC
+.dvc/
+.dvcignore
+/data/raw/
+/data/interim/
+/data/processed/
+
+# Build and distribution
+build/
+dist/
+*.manifest
+*.spec
+
+# Documentation and development
+docs/
+notebooks/
+references/
+reports/
+tests/
+Makefile
+tox.ini
+projectflow.txt
+
+# Docker-related
+scripts/docker/
+clean_docker_*.ps1
+remove_k8s_images.ps1
+force_clean_docker_images.ps1
+
+# Temporary files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Local development scripts
+scripts/setup/
+scripts/ci/
+scripts/flask/
+
+# Unnecessary for container
+README.md
+LICENSE
+.dvcignore
+.dockerignore
+cleanup_project.ps1
+
+# Keep these files
+!requirements.txt
+!deployment/Dockerfile
+!flask_app/
+!src/
+!models/
+!params.yaml

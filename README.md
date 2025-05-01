@@ -152,14 +152,102 @@ docker run -d -p 5000:5000 --name sentiment-analysis-app sentiment-analysis:late
 
 The application will be available at http://localhost:5000
 
-## Deploying to Kubernetes
+## Local Testing with Minikube
 
-To deploy the application to Kubernetes:
+### Setting up Minikube
+
+1. Start Minikube:
 
 ```bash
-# Apply the Kubernetes deployment
+minikube start
+```
+
+2. Deploy the application to Minikube:
+
+```bash
 kubectl apply -f deployment/kubernetes/deployment.yaml
 ```
+
+3. Set up Prometheus and Grafana for monitoring:
+
+```bash
+# Create monitoring namespace
+kubectl create namespace monitoring
+
+# Add Prometheus Helm repository
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+# Install Prometheus and Grafana
+helm install prometheus prometheus-community/kube-prometheus-stack --namespace monitoring
+
+# Expose Grafana as NodePort
+kubectl patch svc prometheus-grafana -n monitoring -p '{"spec": {"type": "NodePort"}}'
+
+# Expose Prometheus as NodePort
+kubectl patch svc prometheus-kube-prometheus-prometheus -n monitoring -p '{"spec": {"type": "NodePort"}}'
+
+# Apply ServiceMonitor for the application
+kubectl apply -f deployment/kubernetes/service-monitor.yaml
+```
+
+4. Access Grafana:
+
+```bash
+# Get Grafana admin password
+kubectl get secret prometheus-grafana -n monitoring -o jsonpath="{.data.admin-password}" | base64 -d
+
+# Port forward Grafana
+kubectl port-forward svc/prometheus-grafana 3000:80 -n monitoring
+```
+
+Grafana will be accessible at http://localhost:3000 with username `admin` and the password retrieved above.
+
+5. Access Prometheus:
+
+```bash
+kubectl port-forward svc/prometheus-kube-prometheus-prometheus 9090:9090 -n monitoring
+```
+
+Prometheus will be accessible at http://localhost:9090.
+
+6. Clean up local resources:
+
+```bash
+# On Windows PowerShell
+.\scripts\cleanup.ps1
+
+# On Linux/Mac
+./scripts/cleanup.sh
+```
+
+## Deploying to Google Kubernetes Engine (GKE)
+
+1. Create a GKE cluster:
+
+```bash
+gcloud container clusters create sentiment-analysis-cluster \
+  --region us-central1 \
+  --num-nodes 2 \
+  --machine-type e2-standard-2
+```
+
+2. Deploy the application to GKE:
+
+```bash
+# On Windows PowerShell
+.\scripts\deploy_to_gke.ps1
+
+# On Linux/Mac
+./scripts/deploy_to_gke.sh
+```
+
+This script will:
+
+- Build and push the Docker image to Google Container Registry
+- Get GKE cluster credentials
+- Create Kubernetes secrets
+- Apply the deployment and service monitor
 
 ## Project Structure
 

@@ -1,0 +1,12 @@
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: sentiment-analysis-monitoring
+spec:
+  selector:
+    matchLabels:
+      app: sentiment-analysis
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s

@@ -1,0 +1,38 @@
+service:
+  type: LoadBalancer
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - name: Google Cloud Monitoring
+      type: stackdriver
+      access: proxy
+      jsonData:
+        tokenUri: https://oauth2.googleapis.com/token
+        authenticationType: gce
+        defaultProject: rag-youtube-457803
+      editable: true
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards/default
+
+dashboards:
+  default:
+    kubernetes-app:
+      gnetId: 15661
+      revision: 1
+      datasource: Google Cloud Monitoring
+    sentiment-analysis:
+      url: https://raw.githubusercontent.com/grafana/grafana/main/public/app/plugins/datasource/prometheus/dashboards/prometheus_stats.json
+      datasource: Google Cloud Monitoring
